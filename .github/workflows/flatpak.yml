@@ -1,0 +1,72 @@
+name: Flatpak Build
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build-binary:
+    name: Build Rust Binary for Flatpak
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          cache: false
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
+            patchelf libxdo-dev libasound2-dev libspeechd-dev
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Rust binary
+        working-directory: src-tauri
+        run: cargo build --release
+
+      - name: Upload release binary
+        uses: actions/upload-artifact@v6
+        with:
+          name: clickyx-release-binary
+          path: src-tauri/target/release/clickyx
+
+  flatpak:
+    name: Package Flatpak
+    needs: build-binary
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-47
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download release binary
+        uses: actions/download-artifact@v6
+        with:
+          name: clickyx-release-binary
+          path: src-tauri/target/release
+
+      - name: Make binary executable
+        run: chmod +x src-tauri/target/release/clickyx
+
+      - name: Build Flatpak
+        uses: bilelmoussaoui/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: clickyx.flatpak
+          manifest-path: flatpak/com.clickyx.ClickyX.yml
+          cache-key: flatpak-builder-${{ github.sha }}

@@ -1,0 +1,535 @@
+.overlay-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  overflow: hidden;
+  background: transparent;
+  --accent: #4fc3f7;
+  /* Status tokens — same values as the app theme (kept local: overlay doesn't import theme.css) */
+  --status-running: #4caf50;
+  --status-idle: #ff9800;
+  --status-error: #f44336;
+}
+
+.overlay-rect {
+  position: absolute;
+  border: 2px dashed var(--accent, #4fc3f7);
+  border-radius: 4px;
+  animation: rect-draw-in 0.3s ease-out;
+  background: rgba(79, 195, 247, 0.08);
+}
+
+@keyframes rect-draw-in {
+  from {
+    clip-path: inset(0 100% 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.overlay-label {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.overlay-cursor {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  animation: cursor-fade-in 0.2s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@keyframes cursor-fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.cursor-label {
+  font-size: 10px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.overlay-scribble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.overlay-scribble path {
+  fill: none;
+  stroke: var(--accent, #4fc3f7);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: scribble-draw 1.5s ease-out forwards;
+}
+
+@keyframes scribble-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.overlay-caption {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding-bottom: 8px;
+  z-index: 10;
+}
+
+.caption-bubble {
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  max-width: 300px;
+  animation: caption-rise 0.3s ease-out;
+  position: relative;
+}
+
+.caption-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(0, 0, 0, 0.8);
+}
+
+@keyframes caption-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animated-cursor {
+  z-index: 20;
+  pointer-events: none;
+}
+
+.animated-cursor svg {
+  filter: drop-shadow(0 0 6px var(--accent, #4fc3f7));
+}
+
+.animated-cursor .cursor-label {
+  animation: pulse-label 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-label {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+.pet-sprite {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+  animation: pet-float 3s ease-in-out infinite;
+  transition: opacity 0.5s;
+}
+
+@keyframes pet-float {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-4px); }
+}
+
+.agent-dock {
+  position: fixed;
+  z-index: 50;
+  pointer-events: auto;
+  background: rgba(10, 10, 20, 0.55);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(79, 195, 247, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  animation: dock-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.agent-dock-bottom {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 16px;
+  padding: 8px 16px;
+}
+
+.agent-dock-top {
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 16px;
+  padding: 8px 16px;
+}
+
+.agent-dock-left {
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 16px;
+  padding: 16px 8px;
+  flex-direction: column;
+}
+
+.agent-dock-right {
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 16px;
+  padding: 16px 8px;
+  flex-direction: column;
+}
+
+.agent-dock-inner {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.agent-dock-left .agent-dock-inner,
+.agent-dock-right .agent-dock-inner {
+  flex-direction: column;
+}
+
+@keyframes dock-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.agent-dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  transition: background 0.2s;
+  cursor: default;
+  position: relative;
+  user-select: none;
+}
+
+.agent-dock-item:hover {
+  background: rgba(79, 195, 247, 0.12);
+}
+
+.agent-dock-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid rgba(10, 10, 20, 0.55);
+}
+
+.status-dot-active {
+  background: var(--status-running);
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+}
+
+.status-dot-idle {
+  background: var(--status-idle);
+  box-shadow: 0 0 6px rgba(255, 152, 0, 0.4);
+}
+
+.status-dot-busy {
+  background: var(--status-error);
+  box-shadow: 0 0 6px rgba(244, 67, 54, 0.5);
+}
+
+.status-dot-error {
+  background: var(--status-error);
+  box-shadow: 0 0 6px rgba(244, 67, 54, 0.5);
+  animation: dot-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes dot-pulse {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(1.3); opacity: 1; }
+}
+
+.agent-dock-name {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.agent-dock-caption {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Active-control glow (5 concentric pulsing rings) ──────────────────────── */
+.overlay-glow {
+  position: absolute;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.overlay-glow-ring {
+  position: absolute;
+  border: 1.5px solid var(--accent, #4fc3f7);
+  border-radius: 8px;
+  animation: glow-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.7;
+    box-shadow: 0 0 6px var(--accent, #4fc3f7);
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    box-shadow: 0 0 18px var(--accent, #4fc3f7);
+    transform: scale(1.04);
+  }
+}
+
+.overlay-glow-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ── Calibration box ────────────────────────────────────────────────────────── */
+.overlay-calibration {
+  position: absolute;
+  border: 2px dashed var(--accent, #4fc3f7);
+  border-radius: 4px;
+  animation: calibration-pulse 1s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes calibration-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.calibration-label {
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.calibration-corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: inherit;
+  border-style: solid;
+  border-width: 0;
+}
+
+.calibration-corner.tl { top: -2px; left: -2px; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 4px; }
+.calibration-corner.tr { top: -2px; right: -2px; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 4px; }
+.calibration-corner.bl { bottom: -2px; left: -2px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 4px; }
+.calibration-corner.br { bottom: -2px; right: -2px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 4px; }
+
+/* ── Processing indicator ───────────────────────────────────────────────────── */
+.processing-indicator {
+  position: fixed;
+  pointer-events: none;
+  z-index: 35;
+}
+
+.processing-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Waveform ───────────────────────────────────────────────────────────────── */
+.waveform-wrapper {
+  position: fixed;
+  pointer-events: none;
+  z-index: 35;
+}
+
+.waveform-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.waveform-bar {
+  width: 3px;
+  border-radius: 2px;
+  transition: height 0.08s ease-out;
+}
+
+/* ── Overlay rect states ────────────────────────────────────────────────────── */
+.overlay-rect-missed {
+  opacity: 0.4;
+  border-style: dotted !important;
+}
+
+.overlay-rect-completed {
+  border-style: solid !important;
+  opacity: 0.2;
+}
+
+/* ── Streaming caption done state ───────────────────────────────────────────── */
+.caption-done {
+  animation: caption-fade-out 0.5s ease-in 4.5s forwards;
+}
+
+@keyframes caption-fade-out {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+.caption-cursor {
+  animation: blink-cursor 0.7s step-end infinite;
+  margin-left: 1px;
+}
+
+@keyframes blink-cursor {
+  50% { opacity: 0; }
+}
+
+/* ── P-005: Highlight overlay ───────────────────────────────────────────────── */
+.highlight-overlay {
+  position: absolute;
+  border: 2px solid var(--accent, #4fc3f7);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 28;
+  animation: highlight-pulse 2s ease-in-out infinite;
+}
+
+/* Background tint is supplied inline from the accent color; pulse the glow ring */
+@keyframes highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--accent, #4fc3f7);
+    opacity: 0.85;
+  }
+  50% {
+    box-shadow: 0 0 12px 4px var(--accent, #4fc3f7);
+    opacity: 1;
+  }
+}
+
+/* ── P-005: Shape overlays (SVG container) ──────────────────────────────────── */
+.shape-overlay-svg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 32;
+}
+
+.shape-arrow line,
+.shape-curve path {
+  animation: shape-draw-in 0.4s ease-out forwards;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+}
+
+@keyframes shape-draw-in {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.overlay-error-boundary {
+  position: fixed;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(244, 67, 54, 0.85);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  pointer-events: none;
+  max-width: 320px;
+  z-index: 9999;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .overlay-container *,
+  .overlay-container *::before,
+  .overlay-container *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+

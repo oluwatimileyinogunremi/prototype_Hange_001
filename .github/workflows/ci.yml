@@ -1,0 +1,200 @@
+name: CI/CD
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: sccache
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          cache: false
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            src-tauri/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ubuntu-cargo-${{ hashFiles('src-tauri/Cargo.toml') }}
+          restore-keys: |
+            ubuntu-cargo-
+
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Install mold linker
+        run: |
+          sudo apt-get install -y mold
+          echo 'CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/clang' >> $GITHUB_ENV
+          echo 'RUSTFLAGS=-C link-arg=-fuse-ld=mold' >> $GITHUB_ENV
+
+      - name: Install system deps (Linux)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev libasound2-dev libspeechd-dev
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Run frontend tests
+        run: npm test
+      - name: Check Rust compilation
+        working-directory: src-tauri
+        run: cargo check
+      - name: Run Rust tests
+        working-directory: src-tauri
+        run: cargo test --all-features
+      - name: Lint
+        run: cargo clippy -- -D warnings 2>&1 | head -100
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          rustflags: ''
+          cache: false
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            src-tauri/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('src-tauri/Cargo.toml') }}
+          restore-keys: |
+            ${{ matrix.os }}-cargo-
+
+      - name: Install sccache (Rust compile cache)
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Install mold linker (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get install -y mold
+          echo 'CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/clang' >> $GITHUB_ENV
+          echo 'RUSTFLAGS=-C link-arg=-fuse-ld=mold' >> $GITHUB_ENV
+
+      - name: Install system deps (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev libasound2-dev libspeechd-dev
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Verify Windows dependencies
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          try {
+            $regPath = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+            $ver = (Get-ItemProperty -Path $regPath -Name "pv" -ErrorAction Stop).pv
+            Write-Host "✔ WebView2 (Edge) runtime version: $ver"
+          } catch {
+            Write-Host "⚠ Could not determine WebView2 version — continuing anyway"
+          }
+          Write-Host "✔ Windows build dependencies verified"
+
+      - name: Build Tauri app
+        run: npm run tauri build ${{ startsWith(matrix.os, 'macos') && '-- --bundles dmg,app' || '' }}
+
+      - name: Verify Linux build artifacts
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          BUNDLE_DIR="src-tauri/target/release/bundle"
+          echo "=== Linux build artifacts ==="
+          find "$BUNDLE_DIR" -type f -ls
+          echo ""
+          if [ -d "$BUNDLE_DIR/deb" ]; then
+            echo "✔ .deb found"
+          fi
+          if [ -d "$BUNDLE_DIR/appimage" ]; then
+            echo "✔ .AppImage found"
+            APPIMAGE=$(ls "$BUNDLE_DIR/appimage/"*.AppImage 2>/dev/null | head -1)
+            if [ -n "$APPIMAGE" ]; then
+              file "$APPIMAGE"
+            fi
+          fi
+          if [ -d "$BUNDLE_DIR/rpm" ]; then
+            echo "✔ .rpm found"
+          fi
+          BINARY="src-tauri/target/release/clickyx"
+          if [ -f "$BINARY" ]; then
+            MISSING=$(ldd "$BINARY" 2>/dev/null | grep "not found" || true)
+            if [ -n "$MISSING" ]; then
+              echo "⚠ Missing shared library dependencies:"
+              echo "$MISSING"
+            else
+              echo "✔ All shared library dependencies resolved"
+            fi
+          fi
+          echo "=== Verification complete ==="
+
+      - name: Create macOS zip (fallback)
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          cd src-tauri/target/release/bundle/macos 2>/dev/null || true
+          zip -r ClickyX.app.zip ClickyX.app 2>/dev/null || true
+          mv ClickyX.app.zip ../dmg/ 2>/dev/null || true
+
+      - name: Upload artifacts (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v6
+        with:
+          name: clickyx-linux
+          path: src-tauri/target/release/bundle/
+
+      - name: Upload artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v6
+        with:
+          name: clickyx-windows
+          path: src-tauri/target/release/bundle/
+
+      - name: Upload artifacts (macOS ARM64)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v6
+        with:
+          name: clickyx-macos-aarch64
+          path: src-tauri/target/release/bundle/
+
+

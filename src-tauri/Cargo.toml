@@ -1,0 +1,79 @@
+[package]
+name = "clickyx"
+version = "0.2.0"
+description = "ClickyX - Cross-platform AI companion"
+authors = ["ClickyX Contributors"]
+repository = "https://github.com/unn-Known1/clickyX"
+homepage = "https://clickyx.ai"
+edition = "2021"
+default-run = "clickyx"
+
+[lib]
+name = "clickyx_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "clickyx"
+path = "src/main.rs"
+
+[[example]]
+name = "export_types"
+path = "examples/export_types.rs"
+required-features = ["specta-export"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+embed-resource = "3"
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-deep-link = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+actix-web = "4"
+actix-rt = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+dirs = "5"
+log = "0.4"
+env_logger = "0.11"
+reqwest = { version = "0.12", features = ["json", "stream", "multipart"] }
+async-trait = "0.1"
+futures-util = "0.3"
+regex = "1"
+cpal = "0.15"
+hound = "3.5"
+uuid = { version = "1", features = ["v4"] }
+xcap = "0.4"
+base64 = "0.22"
+toml = "0.8"
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+actix-cors = "0.7"
+subtle = "2"
+enigo = { version = "0.2", features = ["serde"] }
+tts = "0.26"
+specta = { version = "2.0.0-rc.22", features = ["export"], optional = true }
+specta-typescript = { version = "0.0.9", optional = true }
+tauri-plugin-single-instance = "2.0.0-rc.0"
+aes-gcm = "0.10.3"
+rand = "0.8.5"
+hex = "0.4.3"
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+specta-export = ["specta", "specta-typescript"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+strip = "symbols"
+codegen-units = 1
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
